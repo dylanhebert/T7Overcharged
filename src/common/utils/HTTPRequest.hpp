@@ -1001,7 +1001,7 @@ namespace http
         Response send(const std::string& method = "GET",
                       const std::string& body = "",
                       const HeaderFields& headerFields = {},
-                      const std::chrono::milliseconds timeout = std::chrono::milliseconds{-1})
+                      const std::chrono::milliseconds timeout = std::chrono::milliseconds{ 5000 })
         {
             return send(method,
                         std::vector<uint8_t>(body.begin(), body.end()),
@@ -1012,7 +1012,7 @@ namespace http
         Response send(const std::string& method,
                       const std::vector<uint8_t>& body,
                       const HeaderFields& headerFields = {},
-                      const std::chrono::milliseconds timeout = std::chrono::milliseconds{-1})
+                      const std::chrono::milliseconds timeout = std::chrono::milliseconds{ 5000 })
         {
             const auto stopTime = std::chrono::steady_clock::now() + timeout;
 
@@ -1043,7 +1043,7 @@ namespace http
 
             // take the first address from the list
             socket.connect(addressInfo->ai_addr, static_cast<socklen_t>(addressInfo->ai_addrlen),
-                           (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : -1);
+                           (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : 5000);
 
             auto remaining = requestData.size();
             auto sendData = requestData.data();
@@ -1052,7 +1052,7 @@ namespace http
             while (remaining > 0)
             {
                 const auto size = socket.send(sendData, remaining,
-                                              (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : -1);
+                                              (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : 5000);
                 remaining -= size;
                 sendData += size;
             }
@@ -1073,7 +1073,7 @@ namespace http
             for (;;)
             {
                 const auto size = socket.recv(tempBuffer.data(), tempBuffer.size(),
-                                              (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : -1);
+                                              (timeout.count() >= 0) ? getRemainingMilliseconds(stopTime) : 5000);
                 if (size == 0) // disconnected
                     return response;
 
