@@ -1,4 +1,5 @@
-#include <std_include.hpp>/*
+#include <std_include.hpp>
+/*
 #include "loader/component_loader.hpp"
 
 #include "game/game.hpp"
@@ -162,4 +163,4 @@ namespace bullet_depletion
 	};
 }
 
-REGISTER_COMPONENT(bullet_depletion::component) */
+REGISTER_COMPONENT(bullet_depletion::component)*/

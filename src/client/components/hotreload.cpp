@@ -167,4 +167,4 @@ namespace hotreload
 	};
 }
 
-REGISTER_COMPONENT(hotreload::component)
+//REGISTER_COMPONENT(hotreload::component)
