@@ -18,44 +18,38 @@ namespace discord
 	int playerScore;
 	int enemyScore;
 	bool isIngame = false;
+	const char* playerWeapon;
+	int playerKills;
 
 	void update_discord()
 	{
+		//std::cout << "Attempting to update Discord RPC" << std::endl;
+
 		Discord_RunCallbacks();
 
 		if (!isIngame)
 		{
-			discord_presence.details = game::Com_SessionMode_IsMode(game::eModes::MODE_CAMPAIGN) ? "Campaign" : game::Com_SessionMode_IsMode(game::eModes::MODE_MULTIPLAYER) ? "Multiplayer" : "Zombies";
+			discord_presence.details = "Zombies";
 			discord_presence.state = "Lobby";
 			roundsPlayed = 0;
 			playerScore = 0;
 			enemyScore = 0;
+			playerWeapon = "None";
+			playerKills = 0;
 
 			discord_presence.startTimestamp = 0;
 
-			discord_presence.largeImageKey = "t7overcharged";
+			discord_presence.largeImageKey = "deadhigh_splatter";
+			discord_presence.largeImageText = "Dead High - Zombies";
+			discord_presence.smallImageKey = "bo3_logo_transparent";
+			discord_presence.smallImageText = "Call of Duty: Black Ops III";
 		}
 		else
 		{
-			auto map = game::UI_SafeTranslateString(game::Com_GameInfo_GetMapRef(dvars::ui_mapname->current.string));
-
-			if (game::Com_SessionMode_IsMode(game::eModes::MODE_CAMPAIGN))
-			{
-				discord_presence.state = "In-Game";
-				discord_presence.details = map;
-			}
-			else if (game::Com_SessionMode_IsMode(game::eModes::MODE_MULTIPLAYER))
-			{
-				auto gametype = game::UI_SafeTranslateString(game::Com_GameInfo_GetGameTypeRef(dvars::ui_gametype->current.string));
-				discord_presence.details = utils::string::va("%s on %s", gametype, map);
-				discord_presence.state = utils::string::va("%d - %d", playerScore, enemyScore);
-			}
-			else
-			{
-				discord_presence.state = utils::string::va("Round %d", roundsPlayed);
-				discord_presence.details = map;
-			}
-
+			static std::string detailsBuffer;
+			detailsBuffer = "Round " + std::to_string(roundsPlayed) + " - " + playerWeapon;
+			discord_presence.details = detailsBuffer.c_str();
+			//discord_presence.state = utils::string::va("Round %d", roundsPlayed);
 
 			if (!discord_presence.startTimestamp)
 			{
@@ -63,13 +57,33 @@ namespace discord
 					std::chrono::system_clock::now().time_since_epoch()).count();
 			}
 
-			discord_presence.largeImageKey = dvars::ui_mapname->current.string;
+			discord_presence.largeImageKey = "deadhigh_splatter";
+			discord_presence.largeImageText = "Dead High - Zombies";
+			discord_presence.smallImageKey = "bo3_logo_transparent";
+			discord_presence.smallImageText = "Call of Duty: Black Ops III";
 		}
 
 		discord_presence.partySize = game::LobbySession_GetClientCount(0, game::LobbyClientType::LOBBY_CLIENT_TYPE_ALL);
 		discord_presence.partyMax = dvars::com_maxclients->current.integer;
+		
+		if (discord_presence.partySize == 1) 
+		{
+			discord_presence.state = "Playing Solo";
+		}
+		else 
+		{
+			discord_presence.state = "Playing Co-op";
+		}
 
+		// Persistent buttons
+		discord_presence.button1_url = "https://deadhighstats.com";
+		discord_presence.button1_label = "Dead High Website";
+		discord_presence.button2_url = "https://discord.gg/jeqXWhzh5J";
+		discord_presence.button2_label = "Join the Discord";
+
+		//std::cout << "Updating Discord RPC - state: " << discord_presence.state << std::endl;
 		Discord_UpdatePresence(&discord_presence);
+		//std::cout << "Updated Discord RPC - state: " << discord_presence.state << std::endl;
 	}
 
 	int enable(lua::lua_State* s);
@@ -92,6 +106,18 @@ namespace discord
 		return 1;
 	}
 
+	int set_playerweapon(lua::lua_State* s)
+	{
+		playerWeapon = lua::lua_tostring(s, 1);
+		return 1;
+	}
+
+	int set_playerkills(lua::lua_State* s)
+	{
+		playerKills = lua::lua_tonumber(s, 1);
+		return 1;
+	}
+
 	class component final : public component_interface
 	{
 	public:
@@ -110,9 +136,11 @@ namespace discord
 			handlers.joinRequest = nullptr;
 
 			Discord_Initialize(applicationId, &handlers, 1, nullptr);
-			scheduler::loop(update_discord, scheduler::pipeline::async, 10s);
+			update_discord();
+			scheduler::loop(update_discord, scheduler::pipeline::async, 6s);
 
 			initialized_ = true;
+			std::cout << "Initialized Discord RPC - ID: " << applicationId << std::endl;
 		}
 
 		void lua_start() override
@@ -123,6 +151,8 @@ namespace discord
 				{"SetRoundsPlayed", set_rounds_played},
 				{"SetPlayerScore", set_playerscore},
 				{"SetEnemyScore", set_enemyscore},
+				{"SetPlayerWeapon", set_playerweapon},
+				{"SetPlayerKills", set_playerkills},
 				{nullptr, nullptr},
 			};
 			hks::hksI_openlib(game::UI_luaVM, "DiscordRPC", HotReloadLibrary, 0, 1);
@@ -149,6 +179,12 @@ namespace discord
 				"if enemyScore and not Engine.IsVisibilityBitSet( 0, Enum.UIVisibilityBit.BIT_IN_KILLCAM ) then "
 				"DiscordRPC.SetEnemyScore(enemyScore); "
 				"end; "
+				"end); "
+				"LUI.roots.UIRoot0:subscribeToGlobalModel(0, 'CurrentWeapon', 'weaponName', function(model) "
+				"local playerWeapon = Engine.GetModelValue(model); "
+				"if playerWeapon and not Engine.IsVisibilityBitSet( 0, Enum.UIVisibilityBit.BIT_IN_KILLCAM ) then "
+				"DiscordRPC.SetPlayerWeapon(playerWeapon); "
+				"end; "
 				"end); ";
 			hks::execute_raw_lua(raw_lua, "DiscordScoreModels");
 		}
@@ -172,6 +208,7 @@ namespace discord
 
 		static void errored(const int error_code, const char* message)
 		{
+			std::cout << "Discord RPC Error: (" << error_code << ") " << message << std::endl;
 			printf("Discord: (%i) %s", error_code, message);
 		}
 	};
