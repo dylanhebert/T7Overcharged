@@ -58,9 +58,9 @@ namespace discord
 			}
 
 			discord_presence.largeImageKey = "deadhigh_splatter";
-			discord_presence.largeImageText = "Dead High - Zombies";
+			discord_presence.largeImageText = "Dead High";
 			discord_presence.smallImageKey = "bo3_logo_transparent";
-			discord_presence.smallImageText = "Call of Duty: Black Ops III";
+			discord_presence.smallImageText = "Call of Duty: Black Ops III - Zombies";
 		}
 
 		discord_presence.partySize = game::LobbySession_GetClientCount(0, game::LobbyClientType::LOBBY_CLIENT_TYPE_ALL);
