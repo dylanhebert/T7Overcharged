@@ -40,9 +40,9 @@ namespace discord
 			discord_presence.startTimestamp = 0;
 
 			discord_presence.largeImageKey = "deadhigh_splatter";
-			discord_presence.largeImageText = "Dead High - Zombies";
+			discord_presence.largeImageText = "Dead High";
 			discord_presence.smallImageKey = "bo3_logo_transparent";
-			discord_presence.smallImageText = "Call of Duty: Black Ops III";
+			discord_presence.smallImageText = "Call of Duty: Black Ops III - Zombies";
 		}
 		else
 		{

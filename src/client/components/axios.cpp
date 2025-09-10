@@ -7,18 +7,28 @@
 #include <future>
 #include <functional>
 
+namespace {
+    inline std::pair<std::string, std::string> makeUserAgent(const std::string& mapVersion)
+    {
+        return { "User-Agent", "DeadHighGameClient/" + mapVersion };
+    }
+}
+
 namespace axios
 {
     // GET
     int get(lua::lua_State* s)
     {
         auto url = lua::lua_tostring(s, 1);
+        auto mapVersion = lua::lua_tostring(s, 2);
         std::cout << "Requesting URL: " << url << std::endl;
 
         try
         {
             http::Request request{ url };
-            const auto response = request.send("GET");
+            const auto response = request.send("GET", "", {
+                    makeUserAgent(mapVersion)
+                });
 
             std::cout << "Response Status: " << std::to_string(response.status.code) << std::endl;
 
@@ -57,12 +67,14 @@ namespace axios
     {
         auto url = lua::lua_tostring(s, 1);
         auto body = lua::lua_tostring(s, 2);
+        auto mapVersion = lua::lua_tostring(s, 3);
 
         try
         {
             http::Request request{ url };
             const auto response = request.send("POST", body, {
-                {"Content-Type", "application/json"}
+                    {"Content-Type", "application/json"},
+                    makeUserAgent(mapVersion)
                 });
 
             std::cout << "Response Status: " << std::to_string(response.status.code) << std::endl;
@@ -102,15 +114,17 @@ namespace axios
     {
         auto url = lua::lua_tostring(s, 1);
         auto body = lua::lua_tostring(s, 2);
+        auto mapVersion = lua::lua_tostring(s, 3);
 
         // Start asynchronous HTTP POST request
-        std::thread([s, url, body]()
+        std::thread([s, url, body, mapVersion]()
         {
             try 
             {
                 http::Request request{ url };
                 const auto response = request.send("POST", body, {
-                    {"Content-Type", "application/json"}
+                        {"Content-Type", "application/json"},
+                        makeUserAgent(mapVersion)
                     });
 
                 game::minlog.WriteLine("post SUCCESS");
